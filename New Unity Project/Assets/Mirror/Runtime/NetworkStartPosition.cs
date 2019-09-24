@@ -7,7 +7,7 @@ namespace Mirror
     /// <para>This object's transform will be automatically registered and unregistered with the NetworkManager as a starting position.</para>
     /// </summary>
     [DisallowMultipleComponent]
-    [AddComponentMenu("Network/NetworkStartPosition")]
+    [AddComponentMenu("Mirror/NetworkStartPosition")]
     [HelpURL("https://mirror-networking.com/xmldocs/Components/NetworkStartPosition.html")]
     public class NetworkStartPosition : MonoBehaviour
     {

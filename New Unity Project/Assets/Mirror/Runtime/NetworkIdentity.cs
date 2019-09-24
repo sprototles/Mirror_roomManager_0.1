@@ -43,7 +43,7 @@ namespace Mirror
     /// </remarks>
     [ExecuteInEditMode]
     [DisallowMultipleComponent]
-    [AddComponentMenu("Network/NetworkIdentity")]
+    [AddComponentMenu("Mirror/NetworkIdentity")]
     [HelpURL("https://mirror-networking.com/xmldocs/Components/NetworkIdentity.html")]
     public sealed class NetworkIdentity : MonoBehaviour
     {

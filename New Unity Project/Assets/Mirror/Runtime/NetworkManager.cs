@@ -18,7 +18,7 @@ namespace Mirror
         RoundRobin
     }
 
-    [AddComponentMenu("Network/NetworkManager")]
+    [AddComponentMenu("Mirror/NetworkManager")]
     [HelpURL("https://mirror-networking.com/xmldocs/Components/NetworkManager.html")]
     public class NetworkManager : MonoBehaviour
     {

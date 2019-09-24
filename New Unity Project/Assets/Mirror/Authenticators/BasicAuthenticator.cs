@@ -3,7 +3,7 @@ using System.Collections;
 
 namespace Mirror.Authenticators
 {
-    [AddComponentMenu("Network/Authenticators/BasicAuthenticator")]
+    [AddComponentMenu("Mirror/Authenticators/BasicAuthenticator")]
     public class BasicAuthenticator : NetworkAuthenticator
     {
         [Header("Custom Properties")]
