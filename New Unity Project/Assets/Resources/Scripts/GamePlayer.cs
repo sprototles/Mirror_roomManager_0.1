@@ -48,19 +48,25 @@ namespace Mirror
 
             Debug.Log("keyCodes.Length = " + keyCodes.Length, gameObject);
 
-            for (int i = 0; i < networkRoomPlayer.localPlayerCount; i++)
+            if (isLocalPlayer)
             {
-                GameObject go = Instantiate(GameObject.CreatePrimitive(PrimitiveType.Cube));
-                go.transform.position = new Vector3(0 + i*5f,0,0);
+                for (int i = 0; i < networkRoomPlayer.localPlayerCount; i++)
+                {
+                    GameObject go = GameObject.CreatePrimitive(PrimitiveType.Cube);
+                    go.transform.position = new Vector3(0 + i * 5f, 0, 0);
+                    go.transform.SetParent(gameObject.transform);
+                    go.name = "Cube" + i;
 
-                go.AddComponent<NetworkIdentity>();
-                go.GetComponent<NetworkIdentity>().localPlayerAuthority = true;
+                    go.AddComponent<NetworkIdentity>();
+                    go.GetComponent<NetworkIdentity>().localPlayerAuthority = true;
 
-                // NetworkServer.Spawn(go);
-                playerObject.Add(go);
+                    NetworkServer.Spawn(go);
+                    playerObject.Add(go);
+                }
             }
             
         }
+        
 
         private void Update()
         {
