@@ -555,7 +555,12 @@ namespace Mirror
         /// <returns>False to not allow this player to replace the room player.</returns>
         public virtual bool OnRoomServerSceneLoadedForPlayer(GameObject roomPlayer, GameObject gamePlayer)
         {
+
             // pass data from roomPlayer to gamePlayer
+
+            gamePlayer.GetComponent<GamePlayer>().networkRoomPlayer = roomPlayer.GetComponent<NetworkRoomPlayer>();
+            roomPlayer.GetComponent<NetworkRoomPlayer>().gamePlayer = gamePlayer.GetComponent<GamePlayer>();
+
             return true;
         }
 

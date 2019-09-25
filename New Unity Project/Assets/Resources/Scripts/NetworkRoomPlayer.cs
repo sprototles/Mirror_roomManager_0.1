@@ -77,27 +77,13 @@ namespace Mirror
 
             gameObject.name = "RoomPlayer_Client" + clientIndex;
 
-            clientPlayerName = "Client player " + clientIndex;
-
-            // client itself is count as first local player
+            UpdateLocalPlayerCount();
 
             Debug.Log("clientIndex: " + clientIndex + " ,localPlayerCount: " + localPlayerCount, gameObject);
             
             // load additional local players from non-local clients
-            if (!isLocalPlayer && localPlayerCount > 1)
-            {
-                Debug.Log("Load: " + localPlayerCount + " players", gameObject);
-                for (int i = 1; i <= localPlayerCount; i++)
-                {
-                    Debug.Log("Load player" + i, gameObject);
-                    LoadLocalPlayer(i);
-                }
 
-                if (localPlayerCount != listRoomLocalPlayer.Count)
-                {
-                    Debug.LogError("One or more local players not loaded correctly");
-                }
-            }
+            CmdAddLocalPlayer();
 
         }
 
@@ -154,13 +140,10 @@ namespace Mirror
 
         #endregion
 
-        #region Optional UI
-
         [Header("Local player param.")]
-
         [SerializeField]
-        [SyncVar]
-        public string clientPlayerName;
+        public SyncListString listLocalPlayerName = new SyncListString();
+        
 
         /// <summary>
         /// temporary parameter used for updating localPlayerName
@@ -168,8 +151,11 @@ namespace Mirror
         private string tempPlayerName;
 
         [SerializeField]
-        [SyncVar]
-        bool clientReadyToBegin;
+        public SyncListBool listLocalPlayerReadyToBegin = new SyncListBool();
+
+
+        #region Optional UI
+
 
         /// <summary>
         /// Calculate Rect for UI elemets
@@ -177,13 +163,14 @@ namespace Mirror
         /// <param name="clientIndex"></param>
         /// <param name="localPlayerIndex"></param>
         /// <returns></returns>
-        private Rect UpdateGUIArea(int clientIndex)
+        private Rect UpdateGUIArea(int clientIndex, int localPlayerIndex)
         {
-            Rect rect = new Rect(10f , 170f + clientIndex * 140f, 140f, 130f);
+            Rect rect = new Rect(10f + 150f * (localPlayerIndex), 170f + clientIndex * 140f, 140f, 130f);
 
             return rect;
         }
 
+        private int localPlayerIncrement;
 
         /// <summary>
         /// Render a UI for the room.   Override to provide your on UI
@@ -201,91 +188,117 @@ namespace Mirror
                 if (SceneManager.GetActiveScene().name != networkRoomManager.RoomScene)
                     return;
 
-                // do only for client player, additional local players will have their own GUI scripts
-                
-                GUI.Box(UpdateGUIArea(clientIndex), "");
-                GUILayout.BeginArea(UpdateGUIArea(clientIndex));
-
-                // display some matching index
-                GUILayout.Label("\t" + clientIndex + " / 0");
-
-                // PLAYER name
-                if (isLocalPlayer)
+                if (localPlayerCount == 0)
                 {
-                    tempPlayerName = GUILayout.TextField(clientPlayerName, 24);
-                    if (tempPlayerName != clientPlayerName)
-                    {
-                        CmdChangeClientPlayerName(tempPlayerName);
-                    }
-                }
-                else
-                {
-                    GUILayout.Label(clientPlayerName);
+                    // do not renderGUI if there is no local players 
+                    return;
                 }
 
-
-                // READY / NOT READY
-                if (clientReadyToBegin)
-                    GUILayout.Label("Ready");
-                else
-                    GUILayout.Label("Not Ready");
-
-                // READY / CANCEL BUTTON
-                if (NetworkClient.active && isLocalPlayer)
+                for (localPlayerIncrement = 0; localPlayerIncrement < localPlayerCount; localPlayerIncrement++)
                 {
-                    if (clientReadyToBegin)
+                    // do only for client player, additional local players will have their own GUI scripts
+
+                    GUI.Box(UpdateGUIArea(clientIndex,localPlayerIncrement), "");
+                    GUILayout.BeginArea(UpdateGUIArea(clientIndex, localPlayerIncrement));
+
+                    // display some matching index
+                    GUILayout.Label("\t" + clientIndex + " / " + localPlayerIncrement);
+
+                    // PLAYER name
+                    if (isLocalPlayer)
                     {
-                        if (GUILayout.Button("Cancel"))
+                        tempPlayerName = GUILayout.TextField(listLocalPlayerName[localPlayerIncrement], 24);
+                        if (tempPlayerName != listLocalPlayerName[localPlayerIncrement])
                         {
-                            CmdChangeClientReadyToBegin(false);
+                            // CmdChangeClientPlayerName(tempPlayerName);
                         }
                     }
                     else
                     {
-                        if (GUILayout.Button("Ready"))
+                        GUILayout.Label(listLocalPlayerName[localPlayerIncrement]);
+                    }
+
+
+                    // READY / NOT READY
+                    if (listLocalPlayerReadyToBegin[localPlayerIncrement])
+                        GUILayout.Label("Ready");
+                    else
+                        GUILayout.Label("Not Ready");
+
+                    // READY / CANCEL BUTTON
+                    if (NetworkClient.active && isLocalPlayer)
+                    {
+                        if (listLocalPlayerReadyToBegin[localPlayerIncrement])
                         {
-                            CmdChangeClientReadyToBegin(true);
-
-                            // recalculate ready status on client
-
+                            if (GUILayout.Button("Cancel"))
+                            {
+                                Debug.Log("localPlayerIndex::" + localPlayerIncrement + " , status::" + false, gameObject);
+                                CmdLocalPlayerReadyToBegin(localPlayerIncrement, false);
+                            }
                         }
-                    }
+                        else
+                        {
+                            if (GUILayout.Button("Ready"))
+                            {
+                                Debug.Log("localPlayerIndex::" + localPlayerIncrement + " , status::" + true, gameObject);
+                                CmdLocalPlayerReadyToBegin(localPlayerIncrement,true);
 
-                    // REMOVE ONLINE PLAYER
-                    if (((isServer && clientIndex > 0) || isServerOnly) && GUILayout.Button("KICK OUT"))
-                    {
-                        // This button only shows on the Host for all players other than the Host
-                        // Host and Players can't remove themselves (stop the client instead)
-                        // Host can kick a Player this way.
-                        GetComponent<NetworkIdentity>().connectionToClient.Disconnect();
-                    }
+                                // recalculate ready status on client
 
-                    // ADD LOCAL PLAYER
-                    if (isLocalPlayer && listRoomLocalPlayer.Count < networkRoomManager.maxLocalPlayers && GUILayout.Button("Add local player"))
-                    {
-                        // create local player
-                        Debug.Log("Add local player");
-                        // Cmd !!!
-                        CmdAddLocalPlayer();
-                    }
+                            }
+                        }
 
+                        // REMOVE ONLINE PLAYER
+                        if (((isServer && clientIndex > 0) || isServerOnly) && GUILayout.Button("KICK OUT"))
+                        {
+                            // This button only shows on the Host for all players other than the Host
+                            // Host and Players can't remove themselves (stop the client instead)
+                            // Host can kick a Player this way.
+                            GetComponent<NetworkIdentity>().connectionToClient.Disconnect();
+                        }
+
+                        // ADD LOCAL PLAYER
+                        if (isLocalPlayer &&
+                            localPlayerIncrement == 0 &&    // display only on first local player GUI
+                            networkRoomManager.allowLocalPlayers && // more than 1 local player is allowed
+                            localPlayerCount < networkRoomManager.maxLocalPlayers &&    // localPlayerCount isnt greater than limit
+                            GUILayout.Button("Add local player"))
+                        {
+                            // create local player
+                            Debug.Log("Add local player");
+                            // Cmd !!!
+                            CmdAddLocalPlayer();
+                        }
+
+                        // ADD LOCAL PLAYER
+                        if (isLocalPlayer && localPlayerIncrement == 1 && GUILayout.Button("Remove local player"))
+                        {
+                            // create local player
+                            Debug.Log("Add local player");
+                            // Cmd !!!
+                            CmdRemoveLastLocalPlayer();
+                        }
+                        
+                    }
+                    GUILayout.EndArea();
+                    
                 }
-                GUILayout.EndArea();
+
             }
         }
 
         #endregion
 
-        [SerializeField]
-        public List<RoomLocalPlayer> listRoomLocalPlayer = new List<RoomLocalPlayer>();
-
+        // this will be populated when START GAME button is pressed (OnRoomServerSceneLoadedForPlayer())
+        public GamePlayer gamePlayer;
+        
         #region AddLocalPlayer , source: this.OnStartClient(); RoomLocalPlayer.OnGUI;
 
         // this will create new local player instats
 
         [ContextMenu("CmdAddLocalPlayer")]
         [Command]
-        public void CmdAddLocalPlayer()
+        void CmdAddLocalPlayer()
         {
             AddLocalPlayer();
             RpcAddLocalPlayer();
@@ -303,78 +316,13 @@ namespace Mirror
 
         void AddLocalPlayer()
         {
-            listRoomLocalPlayer.Add(gameObject.AddComponent<RoomLocalPlayer>());
+            Debug.Log("AddLocalPlayer");
+            listLocalPlayerName.Add(clientIndex + " / local player " +localPlayerCount);
+            listLocalPlayerReadyToBegin.Add(false);
 
-            localPlayerCount = listRoomLocalPlayer.Count;
-
-            listRoomLocalPlayer[localPlayerCount - 1].networkRoomPlayer = this;
-
-            // sync values with server or add default
-
-            listRoomLocalPlayer[localPlayerCount - 1].localPlayerReadyToBegin = false;
-            listRoomLocalPlayer[localPlayerCount - 1].localPlayerIndex = localPlayerCount;
-            listRoomLocalPlayer[localPlayerCount - 1].localPlayerName = "Local player " + localPlayerCount;
+            UpdateLocalPlayerCount();
 
         }
-
-        #endregion
-
-        #region LoadLocalPlayer ; this is called when client will join to server, where are already some players with some parameters
-        // this will load local player already created on server
-        // this will be executed only on local machine, since server and original client have that info
-
-        void LoadLocalPlayer(int _localPlayerIndex)
-        {
-            Debug.Log("LoadLocalPlayer(" + _localPlayerIndex + ")",gameObject);
-
-            listRoomLocalPlayer.Add(gameObject.AddComponent<RoomLocalPlayer>());
-            Debug.Log("LoadLocalPlayer() :: AddComponent", gameObject);
-
-            listRoomLocalPlayer[_localPlayerIndex - 1].networkRoomPlayer = this;
-            Debug.Log("LoadLocalPlayer() :: networkRoomPlayer = this", gameObject);
-
-
-            // get status from server
-            CmdGetLocalPlayerReadyToBeginStatus(_localPlayerIndex);
-
-            Debug.Log("CmdGetLocalPlayerReadyToBeginStatus = " + listRoomLocalPlayer[_localPlayerIndex - 1].localPlayerReadyToBegin, gameObject);
-
-            listRoomLocalPlayer[localPlayerCount - 1].localPlayerIndex = _localPlayerIndex;
-
-            Debug.Log("localPlayerIndex = " + listRoomLocalPlayer[_localPlayerIndex - 1].localPlayerIndex, gameObject);
-
-            // get name from server
-            CmdGetLocalPlayerName(_localPlayerIndex);
-            Debug.Log("CmdGetLocalPlayerName = " + listRoomLocalPlayer[_localPlayerIndex - 1].localPlayerName, gameObject);
-
-        }
-
-        
-        [Command]
-        void CmdGetLocalPlayerReadyToBeginStatus(int _localPlayerIndex)
-        {
-            TargetGetLocalPlayerReadyToBeginStatus(_localPlayerIndex, listRoomLocalPlayer[_localPlayerIndex - 1].localPlayerReadyToBegin);
-        }
-
-        [TargetRpc]
-        void TargetGetLocalPlayerReadyToBeginStatus(int _localPlayerIndex , bool loadedLocalPlayerReadyToBegin)
-        {
-            listRoomLocalPlayer[_localPlayerIndex - 1].localPlayerReadyToBegin = loadedLocalPlayerReadyToBegin;
-        }
-
-
-        [Command]
-        void CmdGetLocalPlayerName(int _localPlayerIndex)
-        {
-            TargetGetLocalPlayerName(_localPlayerIndex, listRoomLocalPlayer[_localPlayerIndex - 1].localPlayerName);
-        }
-
-        [TargetRpc]
-        void TargetGetLocalPlayerName(int _localPlayerIndex, string loadedLocalPlayerName)
-        {
-            listRoomLocalPlayer[_localPlayerIndex - 1].localPlayerName = loadedLocalPlayerName;
-        }
-
 
         #endregion
 
@@ -400,56 +348,35 @@ namespace Mirror
         void RemoveLastLocalPlayer()
         {
             // remove last local player
-            listRoomLocalPlayer[listRoomLocalPlayer.Count - 1].RemoveThisRoomLocalPlayer();
-        }
+            listLocalPlayerName.RemoveAt(localPlayerCount-1);
+            listLocalPlayerReadyToBegin.RemoveAt(localPlayerCount-1);
+            UpdateLocalPlayerCount();
 
-        #endregion
-        
-        #region ChangeClientReadyToBegin , source: 
-
-        [Command]
-        void CmdChangeClientReadyToBegin(bool status)
-        {
-            ChangeClientReadyToBegin(status);
-            RecalculateLocalPlayersReadyState();
-            RpcChangeClientReadyToBegin(status);
-        }
-
-        [ClientRpc]
-        void RpcChangeClientReadyToBegin(bool status)
-        {
-            if (isServer) return;
-            ChangeClientReadyToBegin(status);
-        }
-
-        void ChangeClientReadyToBegin(bool status)
-        {
-            clientReadyToBegin = status;
         }
 
         #endregion
 
-        #region ChangeLocalReadyToBegin , source: LocalPlayer.OnGUI
+
+        #region
 
         [Command]
-        public void CmdChangeLocalReadyToBegin(int localPlayerIndex, bool status)
+        void CmdLocalPlayerReadyToBegin(int localPlayerIndex, bool status)
         {
-            ChangeLocalReadyToBegin(localPlayerIndex,status);
-            RecalculateLocalPlayersReadyState();
-            RpcChangeLocalReadyToBegin(localPlayerIndex,status);
+            LocalPlayerReadyToBegin(localPlayerIndex, status);
+            RpcLocalPlayerReadyToBegin(localPlayerIndex, status);
         }
 
-        [ClientRpc]
-        void RpcChangeLocalReadyToBegin(int localPlayerIndex, bool status)
+        void RpcLocalPlayerReadyToBegin(int localPlayerIndex, bool status)
         {
             if (isServer) return;
-
-            ChangeLocalReadyToBegin(localPlayerIndex,status);
+            LocalPlayerReadyToBegin(localPlayerIndex, status);
         }
 
-        void ChangeLocalReadyToBegin(int localPlayerIndex, bool status)
+        void LocalPlayerReadyToBegin(int localPlayerIndex , bool status)
         {
-            listRoomLocalPlayer[localPlayerIndex - 1].localPlayerReadyToBegin = status;
+            Debug.Log("LocalPlayerReadyToBegin() localPlayerIndex::" + localPlayerIndex + " , status::" + status,gameObject);
+            listLocalPlayerReadyToBegin[localPlayerIndex] = status;
+            RecalculateLocalPlayersReadyState();
         }
 
         #endregion
@@ -457,14 +384,13 @@ namespace Mirror
         public void RecalculateLocalPlayersReadyState()
         {
             
-        bool ready = clientReadyToBegin;
+            bool ready = true;
 
-        // check every local player is ready ?
-        foreach (RoomLocalPlayer roomPlayer in listRoomLocalPlayer)
-        {
-            ready = roomPlayer.localPlayerReadyToBegin && ready;   // if not ready, result will be false
-        }
-
+            foreach (bool boo in listLocalPlayerReadyToBegin)
+            {
+                ready = boo && ready;
+            }
+            
             if (ready)
             {
                 // all are ready
@@ -478,59 +404,18 @@ namespace Mirror
     
         }
         
-        #region ChangeLocalPlayerName , source: LocalPlayer.OnGUI
-        
-        [Command]
-        public void CmdChangeLocalPlayerName(int playerIndex, string newName)
+        // check if localplayercoutn is correct
+        private void UpdateLocalPlayerCount()
         {
-            ChangeLocalPlayerName(playerIndex, newName);
-            RpcChangeLocalPlayerName(playerIndex, newName);
-        }
-
-        [ClientRpc]
-        void RpcChangeLocalPlayerName(int playerIndex, string newName)
-        {
-            if (isServer)
+            if (listLocalPlayerName.Count != listLocalPlayerReadyToBegin.Count)
             {
-                return;
+                Debug.LogError("Error::localPlayerCount");
             }
-            ChangeLocalPlayerName(playerIndex, newName);
-        }
-
-        void ChangeLocalPlayerName(int playerIndex, string newName)
-        {
-            listRoomLocalPlayer[playerIndex - 1].localPlayerName = newName;
-        }
-
-        #endregion
-
-        #region ChangeClientPlayerName , source: ClientPlayer.OnGUI
-
-        [Command]
-        public void CmdChangeClientPlayerName( string newName)
-        {
-            ChangeClientPlayerName( newName);
-            RpcChangeClientPlayerName( newName);
-        }
-
-        [ClientRpc]
-        void RpcChangeClientPlayerName(string newName)
-        {
-            if (isServer)
+            else
             {
-                return;
+                localPlayerCount = listLocalPlayerName.Count;
+                Debug.Log(" localPlayerCount (" + localPlayerCount + ") updated",gameObject);
             }
-            ChangeClientPlayerName(newName);
         }
-
-        void ChangeClientPlayerName(string newName)
-        {
-            clientPlayerName = newName;
-        }
-
-        #endregion
-
-
-
     }
 }
