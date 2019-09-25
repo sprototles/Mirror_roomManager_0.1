@@ -10,6 +10,8 @@ namespace Mirror
         // param of local player
         public NetworkRoomPlayer networkRoomPlayer;
 
+        [Header("Local player param.")]
+
         [SerializeField]
         [SyncVar]
         public int localPlayerIndex;
@@ -47,7 +49,7 @@ namespace Mirror
             if (localPlayerIndex < 1)
                 Debug.LogError("Incorrect localPlayerIndex",gameObject);
 
-            Rect rect = new Rect(10f + 150 * (localPlayerIndex - 1), 170f + clientIndex * 140f, 140f, 130f);
+            Rect rect = new Rect(10f + 150 * (localPlayerIndex), 170f + clientIndex * 140f, 140f, 130f);
 
             return rect;
         }
@@ -66,7 +68,7 @@ namespace Mirror
                 if (SceneManager.GetActiveScene().name != networkRoomPlayer.networkRoomManager.RoomScene)
                     return;
 
-                // do stuff from here
+                // do stuff from here only for created local players, excluding original client player
                 
                 GUI.Box(UpdateGUIArea(networkRoomPlayer.clientIndex,localPlayerIndex), "");
                 GUILayout.BeginArea(UpdateGUIArea(networkRoomPlayer.clientIndex, localPlayerIndex));
@@ -78,11 +80,15 @@ namespace Mirror
                 if (isLocalPlayer)
                 {
                     tempPlayerName = GUILayout.TextField(localPlayerName, 24);
-                    //CmdChangePlayerName(PlayerName);
+                    if (tempPlayerName != localPlayerName)
+                    {
+                        networkRoomPlayer.CmdChangeLocalPlayerName(localPlayerIndex, tempPlayerName);
+                    }
+
                 }
                 else
                 {
-                    GUILayout.TextField(localPlayerName);
+                    GUILayout.Label(localPlayerName);
                 }
 
 
@@ -113,6 +119,8 @@ namespace Mirror
                         }
                     }
 
+                    #region REMOVE ONLINE PLAYER; ADD LOCAL PLAYER; done in client GUI
+                    /*
                     // REMOVE ONLINE PLAYER
                     if (((isServer && networkRoomPlayer.clientIndex > 0) || isServerOnly) && GUILayout.Button("KICK OUT"))
                     {
@@ -130,9 +138,11 @@ namespace Mirror
                         // Cmd !!!
                         networkRoomPlayer.CmdAddLocalPlayer();
                     }
+                    */
+                    #endregion
 
                     // REMOVE LOCAL PLAYER
-                    if (isLocalPlayer && localPlayerIndex == 2 && GUILayout.Button("Remove local player"))
+                    if (isLocalPlayer && localPlayerIndex == 1 && GUILayout.Button("Remove local player"))
                     {
                         // create local player
                         Debug.Log("Remove local player");
