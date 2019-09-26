@@ -557,10 +557,9 @@ namespace Mirror
         {
 
             // pass data from roomPlayer to gamePlayer
-
-            gamePlayer.GetComponent<GamePlayer>().networkRoomPlayer = roomPlayer.GetComponent<NetworkRoomPlayer>();
-            roomPlayer.GetComponent<NetworkRoomPlayer>().gamePlayer = gamePlayer.GetComponent<GamePlayer>();
-
+            // this will hapened only on server, i need to do it also on all clients !!!
+            gamePlayer.GetComponent<GamePlayer>().networkRoomPlayerGO = roomPlayer;
+            roomPlayer.GetComponent<NetworkRoomPlayer>().gamePlayerGO = gamePlayer;
             return true;
         }
 

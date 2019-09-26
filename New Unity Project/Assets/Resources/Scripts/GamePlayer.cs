@@ -7,6 +7,11 @@ namespace Mirror
 
     public class GamePlayer : NetworkBehaviour
     {
+        public Spawn spawn;
+
+        [SyncVar]
+        public GameObject networkRoomPlayerGO;
+
         public NetworkRoomPlayer networkRoomPlayer;
 
         public List<GameObject> playerObject = new List<GameObject>();
@@ -44,32 +49,64 @@ namespace Mirror
         // Start is called before the first frame update
         void Start()
         {
+
+            networkRoomPlayer = networkRoomPlayerGO.GetComponent<NetworkRoomPlayer>();
+
             gameObject.name = "GamePlayer " + networkRoomPlayer.clientIndex;
 
             Debug.Log("keyCodes.Length = " + keyCodes.Length, gameObject);
 
+
+            spawn = GameObject.Find("Spawn").GetComponent<Spawn>();
+            
             if (isLocalPlayer)
             {
                 for (int i = 0; i < networkRoomPlayer.localPlayerCount; i++)
                 {
-                    GameObject go = GameObject.CreatePrimitive(PrimitiveType.Cube);
-                    go.transform.position = new Vector3(0 + i * 5f, 0, 0);
-                    go.transform.SetParent(gameObject.transform);
-                    go.name = "Cube" + i;
-
-                    go.AddComponent<NetworkIdentity>();
-                    go.GetComponent<NetworkIdentity>().localPlayerAuthority = true;
-
-                    NetworkServer.Spawn(go);
-                    playerObject.Add(go);
+                    CmdSpawnPlayerGameObject(i);
                 }
             }
-            
         }
         
+        [Command]
+        void CmdSpawnPlayerGameObject(int playerIncrement)
+        {
+            SpawnPlayerGameObject(playerIncrement);
+            RpcSpawnPlayerGameObject(playerIncrement);
 
+        }
+
+        [ClientRpc]
+        void RpcSpawnPlayerGameObject(int playerIncrement)
+        {
+            if (isServer) return;
+            SpawnPlayerGameObject(playerIncrement);
+        }
+        
+        void SpawnPlayerGameObject(int playerIncrement)
+        {
+
+            spawn.SpawnPlayer(playerIncrement,networkRoomPlayer.clientIndex,gameObject);
+            /*
+            GameObject go = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            go.transform.position = new Vector3(0 + playerIncrement * 5f, 0, networkRoomPlayer.clientIndex * 5f);
+            go.transform.SetParent(gameObject.transform);
+            go.name = "Cube" + playerIncrement;
+
+            go.AddComponent<NetworkIdentity>();
+            go.GetComponent<NetworkIdentity>().localPlayerAuthority = true;
+            go.AddComponent<NetworkTransform>();
+
+            playerObject.Add(go);
+
+            NetworkServer.Spawn(go);
+            */
+        }
+        
         private void Update()
         {
+            if (!isLocalPlayer) return;
+
 
             // for-cycle for key per player     OR keyCodes.GetLength(0) instead of localPlayerCount
             for (int i = 0; i < networkRoomPlayer.localPlayerCount; i++)

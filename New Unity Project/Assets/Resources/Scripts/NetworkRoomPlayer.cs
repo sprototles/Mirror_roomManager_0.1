@@ -77,13 +77,34 @@ namespace Mirror
 
             gameObject.name = "RoomPlayer_Client" + clientIndex;
 
-            UpdateLocalPlayerCount();
+            // UpdateLocalPlayerCount();
 
             Debug.Log("clientIndex: " + clientIndex + " ,localPlayerCount: " + localPlayerCount, gameObject);
             
             // load additional local players from non-local clients
 
-            CmdAddLocalPlayer();
+            /*
+            if (isLocalPlayer && isServer)
+            {
+                Debug.Log("isLocalPlayer && isServer");
+                AddLocalPlayer();
+            }
+            else if (isLocalPlayer && !isServer)
+            {
+                Debug.Log("isLocalPlayer && !isServer");
+                CmdAddLocalPlayer();
+            }
+            Debug.Log("asd && !zxc");
+            */
+
+            if (!isServer)
+            {
+                CmdAddLocalPlayer();
+            }
+            else
+            {
+                AddLocalPlayer();
+            }
 
         }
 
@@ -93,6 +114,11 @@ namespace Mirror
 
         [Command]
         public void CmdChangeReadyState(bool readyState)
+        {
+            ChangeReadyState(readyState);
+        }
+
+        void ChangeReadyState(bool readyState)
         {
             readyToBegin = readyState;
             if (networkRoomManager != null)
@@ -207,10 +233,11 @@ namespace Mirror
                     // PLAYER name
                     if (isLocalPlayer)
                     {
-                        tempPlayerName = GUILayout.TextField(listLocalPlayerName[localPlayerIncrement], 24);
+                        tempPlayerName = GUILayout.TextField(listLocalPlayerName[localPlayerIncrement], 19);
                         if (tempPlayerName != listLocalPlayerName[localPlayerIncrement])
                         {
                             // CmdChangeClientPlayerName(tempPlayerName);
+                            CmdChangePlayerName(localPlayerIncrement,tempPlayerName);
                         }
                     }
                     else
@@ -242,8 +269,6 @@ namespace Mirror
                             {
                                 Debug.Log("localPlayerIndex::" + localPlayerIncrement + " , status::" + true, gameObject);
                                 CmdLocalPlayerReadyToBegin(localPlayerIncrement,true);
-
-                                // recalculate ready status on client
 
                             }
                         }
@@ -290,6 +315,11 @@ namespace Mirror
         #endregion
 
         // this will be populated when START GAME button is pressed (OnRoomServerSceneLoadedForPlayer())
+
+        [SyncVar]
+        public GameObject gamePlayerGO;
+
+        [SerializeField]
         public GamePlayer gamePlayer;
         
         #region AddLocalPlayer , source: this.OnStartClient(); RoomLocalPlayer.OnGUI;
@@ -301,7 +331,7 @@ namespace Mirror
         void CmdAddLocalPlayer()
         {
             AddLocalPlayer();
-            RpcAddLocalPlayer();
+            //RpcAddLocalPlayer();
         }
 
         [ClientRpc]
@@ -332,7 +362,7 @@ namespace Mirror
         public void CmdRemoveLastLocalPlayer()
         {
             RemoveLastLocalPlayer();
-            RpcRemoveLastLocalPlayer();
+            //RpcRemoveLastLocalPlayer();
         }
 
         [ClientRpc]
@@ -356,19 +386,26 @@ namespace Mirror
 
         #endregion
 
+        #region ChangePlayerName
 
-        #region
+        [Command]
+        void CmdChangePlayerName(int localPlayerIndex, string newName)
+        {
+            ChangePlayerName(localPlayerIndex,newName);
+        }
+
+        void ChangePlayerName(int localPlayerIndex, string newName)
+        {
+            listLocalPlayerName[localPlayerIndex] = newName;
+        }
+        
+        #endregion
+        
+        #region LocalPlayerReadyToBegin
 
         [Command]
         void CmdLocalPlayerReadyToBegin(int localPlayerIndex, bool status)
         {
-            LocalPlayerReadyToBegin(localPlayerIndex, status);
-            RpcLocalPlayerReadyToBegin(localPlayerIndex, status);
-        }
-
-        void RpcLocalPlayerReadyToBegin(int localPlayerIndex, bool status)
-        {
-            if (isServer) return;
             LocalPlayerReadyToBegin(localPlayerIndex, status);
         }
 
@@ -381,6 +418,7 @@ namespace Mirror
 
         #endregion
 
+        [Server]
         public void RecalculateLocalPlayersReadyState()
         {
             
@@ -394,17 +432,20 @@ namespace Mirror
             if (ready)
             {
                 // all are ready
-                CmdChangeReadyState(true);
+                //CmdChangeReadyState(true);
+                ChangeReadyState(true);
             }
             else
             {
                 Debug.Log("Not all local players are ready");
-                CmdChangeReadyState(false);
+                //CmdChangeReadyState(false);
+                ChangeReadyState(false);
             }
     
         }
         
         // check if localplayercoutn is correct
+        [Server]
         private void UpdateLocalPlayerCount()
         {
             if (listLocalPlayerName.Count != listLocalPlayerReadyToBegin.Count)
@@ -417,5 +458,6 @@ namespace Mirror
                 Debug.Log(" localPlayerCount (" + localPlayerCount + ") updated",gameObject);
             }
         }
+        
     }
 }
