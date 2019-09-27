@@ -7,14 +7,17 @@ namespace Mirror
 
     public class GamePlayer : NetworkBehaviour
     {
-        public Spawn spawn;
+        [SyncVar]
+        public int clientIndex;
 
         [SyncVar]
-        public GameObject networkRoomPlayerGO;
+        public int localPlayerClientCount;
 
-        public NetworkRoomPlayer networkRoomPlayer;
+        public List<GameObject> playerControlledObject = new List<GameObject>();
 
-        public List<GameObject> playerObject = new List<GameObject>();
+        [SyncVar]
+        public Vector3 playerPosition;
+
 
         [SerializeField]
         private readonly KeyCode[,] keyCodes = new KeyCode[4,4];
@@ -44,64 +47,39 @@ namespace Mirror
             keyCodes[3,3] = KeyCode.J;
 
         }
-
-
-        // Start is called before the first frame update
-        void Start()
+        
+        public override void OnStartLocalPlayer()
         {
+            base.OnStartLocalPlayer();
 
-            networkRoomPlayer = networkRoomPlayerGO.GetComponent<NetworkRoomPlayer>();
-
-            gameObject.name = "GamePlayer " + networkRoomPlayer.clientIndex;
-
-            Debug.Log("keyCodes.Length = " + keyCodes.Length, gameObject);
-
-
-            spawn = GameObject.Find("Spawn").GetComponent<Spawn>();
-            
-            if (isLocalPlayer)
+            if (hasAuthority && isLocalPlayer)
             {
-                for (int i = 0; i < networkRoomPlayer.localPlayerCount; i++)
-                {
-                    CmdSpawnPlayerGameObject(i);
-                }
+            //    for(int i = 0; i < localPlayerClientCount; i++)
+            //    {
+                    CmdSpawnPlayerGameObject();
+            //    }
+
             }
         }
-        
+
+        public NetworkIdentity spawnPrefab;
+        GameObject instantiateGameObject;
+
+
         [Command]
-        void CmdSpawnPlayerGameObject(int playerIncrement)
+        void CmdSpawnPlayerGameObject()
         {
-            SpawnPlayerGameObject(playerIncrement);
-            RpcSpawnPlayerGameObject(playerIncrement);
+            Debug.Log("CmdSpawnPlayerGameObject");
+            instantiateGameObject = Instantiate(spawnPrefab.gameObject, new Vector3(0f, 1f, clientIndex * 1f), Quaternion.identity);
 
+            playerPosition = new Vector3(0f, 1f, clientIndex * 1f);
+
+            playerControlledObject.Add(instantiateGameObject);
+            NetworkServer.Spawn(instantiateGameObject);
         }
 
-        [ClientRpc]
-        void RpcSpawnPlayerGameObject(int playerIncrement)
-        {
-            if (isServer) return;
-            SpawnPlayerGameObject(playerIncrement);
-        }
-        
-        void SpawnPlayerGameObject(int playerIncrement)
-        {
 
-            spawn.SpawnPlayer(playerIncrement,networkRoomPlayer.clientIndex,gameObject);
-            /*
-            GameObject go = GameObject.CreatePrimitive(PrimitiveType.Cube);
-            go.transform.position = new Vector3(0 + playerIncrement * 5f, 0, networkRoomPlayer.clientIndex * 5f);
-            go.transform.SetParent(gameObject.transform);
-            go.name = "Cube" + playerIncrement;
-
-            go.AddComponent<NetworkIdentity>();
-            go.GetComponent<NetworkIdentity>().localPlayerAuthority = true;
-            go.AddComponent<NetworkTransform>();
-
-            playerObject.Add(go);
-
-            NetworkServer.Spawn(go);
-            */
-        }
+        #region Update()
         
         private void Update()
         {
@@ -109,36 +87,64 @@ namespace Mirror
 
 
             // for-cycle for key per player     OR keyCodes.GetLength(0) instead of localPlayerCount
-            for (int i = 0; i < networkRoomPlayer.localPlayerCount; i++)
+            for (int i = 0; i < localPlayerClientCount; i++)
             {
+                Vector3 playerPosIncrement = Vector3.zero;
+
                 // KEY UP
                 if (Input.GetKeyDown(keyCodes[i, 0]))
                 {
                     Debug.Log("Key " + keyCodes[i, 0].ToString() + " is pressed down");
-                    playerObject[i].transform.position += new Vector3(1, 0, 0); 
+                    playerPosIncrement += new Vector3(1, 0, 0);
                 }
 
                 // KEY DOWN
                 if (Input.GetKeyDown(keyCodes[i, 1]))
                 {
                     Debug.Log("Key " + keyCodes[i, 1].ToString() + " is pressed down");
-                    playerObject[i].transform.position += new Vector3(-1, 0, 0);
+                    playerPosIncrement += new Vector3(-1, 0, 0);
                 }
 
                 // KEY RIGHT
                 if (Input.GetKeyDown(keyCodes[i, 2]))
                 {
                     Debug.Log("Key " + keyCodes[i, 2].ToString() + " is pressed down");
-                    playerObject[i].transform.position += new Vector3(0, 0, -1);
+                    playerPosIncrement += new Vector3(0, 0, -1);
                 }
 
                 // KEY LEFT
                 if (Input.GetKeyDown(keyCodes[i, 3]))
                 {
                     Debug.Log("Key " + keyCodes[i, 3].ToString() + " is pressed down");
-                    playerObject[i].transform.position += new Vector3(0, 0, 1);
+                    playerPosIncrement += new Vector3(0, 0, 1);
                 }
+                CmdUpdateControlledObjectPosition(i, playerPosIncrement);
             }
         }
+        
+        #endregion
+
+        [Command]
+        void CmdUpdateControlledObjectPosition(int playerIncrement, Vector3 pos)
+        {
+            UpdateControlledObjectPosition(playerIncrement, pos);
+            //RpcUpdateControlledObjectPosition(playerIncrement, pos);
+        }
+
+        [ClientRpc]
+        void RpcUpdateControlledObjectPosition(int playerIncrement, Vector3 pos)
+        {
+            if (isServer) return;
+            UpdateControlledObjectPosition(playerIncrement, pos);
+        }
+        
+        void UpdateControlledObjectPosition(int playerIncrement, Vector3 pos)
+        {
+            playerPosition += pos;
+
+            playerControlledObject[playerIncrement].transform.position = playerPosition;
+
+        }
+
     }
 }

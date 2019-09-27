@@ -17,15 +17,10 @@ namespace Mirror
             instantiateGameObject.name = "Cube[" + x +","+ z + "]";
             instantiateGameObject.transform.position = new Vector3(x * 5f, 0, z * 5f);
             instantiateGameObject.transform.SetParent(gamePlayer.transform);
-            gamePlayer.GetComponent<GamePlayer>().playerObject.Add(instantiateGameObject);
-            /*
-            reward = newPrize.gameObject.GetComponent<Reward>();
-            reward.spawner = this;
-            reward.prizeColor = Random.ColorHSV(0f, 1f, 1f, 1f, 0.5f, 1f);
+            gamePlayer.GetComponent<GamePlayer>().playerControlledObject.Add(instantiateGameObject);
+            
+            NetworkServer.SpawnWithClientAuthority(instantiateGameObject,gamePlayer);
 
-            if (LogFilter.Debug) Debug.LogFormat("Spawning Prize R:{0} G:{1} B:{2}", reward.prizeColor.r, reward.prizeColor.g, reward.prizeColor.b);
-            */
-            NetworkServer.Spawn(instantiateGameObject);
         }
     }
 }

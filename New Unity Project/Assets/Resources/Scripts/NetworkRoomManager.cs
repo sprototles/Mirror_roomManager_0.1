@@ -558,8 +558,14 @@ namespace Mirror
 
             // pass data from roomPlayer to gamePlayer
             // this will hapened only on server, i need to do it also on all clients !!!
-            gamePlayer.GetComponent<GamePlayer>().networkRoomPlayerGO = roomPlayer;
-            roomPlayer.GetComponent<NetworkRoomPlayer>().gamePlayerGO = gamePlayer;
+            NetworkRoomPlayer networkRoomPlayer = roomPlayer.GetComponent<NetworkRoomPlayer>();
+            GamePlayer _gamePlayer = gamePlayer.GetComponent<GamePlayer>();
+            
+            _gamePlayer.clientIndex = networkRoomPlayer.clientIndex;
+            _gamePlayer.localPlayerClientCount = networkRoomPlayer.localPlayerCount;
+            
+            gamePlayer.name = "gamePlayer_" + _gamePlayer.clientIndex;
+
             return true;
         }
 

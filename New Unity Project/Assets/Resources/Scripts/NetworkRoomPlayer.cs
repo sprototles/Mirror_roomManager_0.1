@@ -315,12 +315,11 @@ namespace Mirror
         #endregion
 
         // this will be populated when START GAME button is pressed (OnRoomServerSceneLoadedForPlayer())
+        
+        // public GameObject gamePlayerGO;
 
-        [SyncVar]
-        public GameObject gamePlayerGO;
-
-        [SerializeField]
-        public GamePlayer gamePlayer;
+        // [SerializeField]
+        // public GamePlayer gamePlayer;
         
         #region AddLocalPlayer , source: this.OnStartClient(); RoomLocalPlayer.OnGUI;
 
