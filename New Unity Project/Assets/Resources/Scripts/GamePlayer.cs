@@ -14,11 +14,7 @@ namespace Mirror
         public int localPlayerClientCount;
 
         public List<GameObject> playerControlledObject = new List<GameObject>();
-
-        [SyncVar]
-        public Vector3 playerPosition;
-
-
+              
         [SerializeField]
         private readonly KeyCode[,] keyCodes = new KeyCode[4,4];
         // {KeyCode.W,KeyCode.S,KeyCode.D,KeyCode.A};
@@ -51,13 +47,13 @@ namespace Mirror
         public override void OnStartLocalPlayer()
         {
             base.OnStartLocalPlayer();
-
+            
             if (hasAuthority && isLocalPlayer)
             {
-            //    for(int i = 0; i < localPlayerClientCount; i++)
-            //    {
-                    CmdSpawnPlayerGameObject();
-            //    }
+                for(int i = 0; i < localPlayerClientCount; i++)
+                {
+                    CmdSpawnPlayerGameObject(i);
+                }
 
             }
         }
@@ -67,13 +63,11 @@ namespace Mirror
 
 
         [Command]
-        void CmdSpawnPlayerGameObject()
+        void CmdSpawnPlayerGameObject(int objectIndex)
         {
             Debug.Log("CmdSpawnPlayerGameObject");
-            instantiateGameObject = Instantiate(spawnPrefab.gameObject, new Vector3(0f, 1f, clientIndex * 1f), Quaternion.identity);
-
-            playerPosition = new Vector3(0f, 1f, clientIndex * 1f);
-
+            instantiateGameObject = Instantiate(spawnPrefab.gameObject, new Vector3(1f * objectIndex, 0f, clientIndex * 1f), Quaternion.identity);
+            
             playerControlledObject.Add(instantiateGameObject);
             NetworkServer.Spawn(instantiateGameObject);
         }
@@ -140,10 +134,7 @@ namespace Mirror
         
         void UpdateControlledObjectPosition(int playerIncrement, Vector3 pos)
         {
-            playerPosition += pos;
-
-            playerControlledObject[playerIncrement].transform.position = playerPosition;
-
+            playerControlledObject[playerIncrement].transform.position += pos;
         }
 
     }
