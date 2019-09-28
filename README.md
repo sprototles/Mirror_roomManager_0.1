@@ -12,8 +12,11 @@ this demo have default value for 4 player, demo may be bugged , but you should g
 you can move them with keys:
 
 W,A,S,D
+
 arrows
+
 numpad:8,5,6,4
+
 I,K,J,L
 
 feel free to comment/update or contact me if you have any question about this modification
